@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# QML documentation build configuration file, created by
+# FNS documentation build configuration file, created by
 # sphinx-quickstart on Sun Jun  4 14:41:04 2017.
 #
 # This file is execfile()d with the current directory set to its

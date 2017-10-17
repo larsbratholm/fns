@@ -40,14 +40,14 @@ LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
 MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
-#ext_frepresentations = Extension(name = 'frepresentations',
-#                          sources = ['qml/frepresentations.f90'],
-#                          extra_f90_compile_args = COMPILER_FLAGS,
-#                          extra_f77_compile_args = COMPILER_FLAGS,
-#                          extra_compile_args = COMPILER_FLAGS,
-#                          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
-#                          language = FORTRAN,
-#                          f2py_options=['--quiet'])
+ext_ffn = Extension(name = 'ffn',
+          sources = ['fns/ffn.f90'],
+          extra_f90_compile_args = COMPILER_FLAGS,
+          extra_f77_compile_args = COMPILER_FLAGS,
+          extra_compile_args = COMPILER_FLAGS,
+          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
+          language = FORTRAN,
+          f2py_options=['--quiet'])
 
 # use README.md as long description
 def readme():
@@ -75,9 +75,9 @@ def setup_pepytools():
         # set up package contents
 
         ext_package = 'fns',
-        #ext_modules = [
-        #      ext_frepresentations,
-        #],
+        ext_modules = [
+              ext_ffn,
+        ],
 )
 
 if __name__ == '__main__':

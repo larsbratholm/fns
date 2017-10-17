@@ -30,8 +30,6 @@ Provides
 """
 from __future__ import absolute_import
 
-from .compound import Compound
-
 __author__ = "Lars Andersen Bratholm"
 __copyright__ = "Copyright 2017"
 __credits__ = ["Lars Andersen Bratholm (2017) https://github.com/larsbratholm/fns"]
