@@ -194,15 +194,15 @@ subroutine fiffn(features, seed, npartitions, nmax, final_ordering)
                 endif
 
                 d = max(d,sum((features(n,:) - features(m,:))**2))
+            if (d > maxdist) then
+                idx = j
+                maxdist = d
+            endif
 
             enddo
             !$OMP END PARALLEL DO
 
             ! Having this outside the loop is somewhat faster
-            if (d > maxdist) then
-                idx = j
-                maxdist = d
-            endif
         enddo
 
         ordering(i) = ordering(idx)

@@ -22,11 +22,26 @@
 
 from __future__ import print_function
 
+from fns.fn import iffn
 import numpy as np
+import pickle
 
-def test_stuff():
-    return 1
+def unpickle(file):
+    with open(file, 'rb') as fo:
+        dict = pickle.load(fo, encoding='bytes')
+    return dict
+
+def tests():
+    x = unpickle('test_batch')[b'data'][:50]
+
+    brute = iffn(x, seed=1, brute=True)
+    exact1 = iffn(x, npartitions=1, exact = True, seed=1)
+    exact16 = iffn(x, npartitions=1, exact = True, seed=1)
+
+    assert(np.array_equal(brute, exact1))
+    assert(np.array_equal(brute, exact16))
+
 
 if __name__ == "__main__":
-    test_stuff()
+    tests()
 
