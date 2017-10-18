@@ -22,9 +22,9 @@
 
 import numpy as np
 
-from .ffn import fiffn
+from .ffn import fiffn, fffn, fifafn, fobf
 
-def iffn(features, seed = -1, npartitions = 1, nmax = 0, exact = True):
+def iffn(features, seed = -1, npartitions = 1, nmax = 0, exact = True, brute = False):
     """ Iteratively perform the improved fast furthest neighbours algorithm
         described in Rahman & Rochan 2016 (10.1109/ICCITECHN.2016.7860222)
         to create a furthest neighbour ordering of a feature vector, given an
@@ -79,16 +79,6 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0, exact = True):
     if seed <= 0:
         seed = np.random.randint(nsamples) + 1
 
-    if int(npartitions) != npartitions:
-        raise ValueError('expected integer npartitions')
-
-    if npartitions <= 0:
-        raise ValueError('expected positive number of partitions')
-
-    nfeatures = features.shape[1]
-    if npartitions >= nfeatures/2:
-        raise ValueError('too many partitions')
-
     if int(nmax) != nmax:
         raise ValueError('expected integer nmax')
 
@@ -98,8 +88,28 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0, exact = True):
     if nmax > nsamples:
         raise ValueError('nmax (%d) larger to size of feature array (%d)' % (nmax, nsamples))
 
+    if int(npartitions) != npartitions:
+        raise ValueError('expected integer npartitions')
+
+    if npartitions <= 0:
+        raise ValueError('expected positive number of partitions')
+
+    nfeatures = features.shape[1]
+
+    if brute:
+        return fobf(features, seed, nmax)
+
+    if npartitions >= nfeatures/2:
+        raise ValueError('too many partitions')
+
+
     if exact not in [True, False]:
         raise ValueError('expected boolean value for parameter exact')
 
-
-    return fiffn(features, seed, npartitions, nmax)
+    if exact:
+        if npartitions == 1:
+            return fffn(features, seed, nmax)
+        else:
+            return fiffn(features, seed, npartitions, nmax)
+    else:
+        return fifafn(features, seed, npartitions, nmax)
