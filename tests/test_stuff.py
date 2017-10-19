@@ -24,11 +24,15 @@ from __future__ import print_function
 
 from fns.fn import iffn
 import numpy as np
-import pickle
 
 def unpickle(file):
     with open(file, 'rb') as fo:
-        dict = pickle.load(fo, encoding='bytes')
+        try:
+            import cPickle as pickle
+            dict = pickle.load(fo)
+        except:
+            import pickle
+            dict = pickle.load(fo, encoding='bytes')
     return dict
 
 def tests():

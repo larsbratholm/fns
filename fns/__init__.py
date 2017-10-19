@@ -25,8 +25,6 @@
 FNS main module
 ===============
 
-Provides
-  1. stuff
 """
 from __future__ import absolute_import
 
@@ -37,5 +35,5 @@ __license__ = "MIT"
 __version__ = "0.0.1"
 __maintainer__ = "Lars Andersen Bratholm"
 __email__ = "lars.bratholm@bristol.ac.uk"
-__status__ = "Alpha"
+__status__ = "Beta"
 

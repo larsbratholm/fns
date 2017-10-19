@@ -18,8 +18,8 @@ FORTRAN = "f90"
 # GNU (default)
 COMPILER_FLAGS = ["-fopenmp", "-m64", "-march=native", "-fPIC", "-Ofast", "-ffast-math", "-funroll-loops",
                     "-Wno-maybe-uninitialized", "-Wno-unused-function", "-Wno-cpp"]#, "-fcheck=all"]
-#LINKER_FLAGS = ["-lgomp"]
-#MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
+LINKER_FLAGS = ["-L/usr/include","-L/include","-I/usr/include","-I/include","-lgomp"]
+MATH_LINKER_FLAGS = ["-lblas", "-llapack"]
 
 # For clang without OpenMP: (i.e. most Apple/mac system)
 if sys.platform == "darwin" and all(["gnu" not in arg for arg in sys.argv]):
@@ -36,8 +36,8 @@ if any(["intelem" in arg for arg in sys.argv]):
 
 
 # UNCOMMENT TO FORCE LINKING TO MKL with GNU compilers:
-LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
-MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
+# LINKER_FLAGS = ["-lgomp", " -lpthread", "-lm", "-ldl"]
+# MATH_LINKER_FLAGS = ["-L${MKLROOT}/lib/intel64", "-lmkl_rt"]
 
 
 ext_ffn = Extension(name = 'ffn',
@@ -45,7 +45,7 @@ ext_ffn = Extension(name = 'ffn',
           extra_f90_compile_args = COMPILER_FLAGS,
           extra_f77_compile_args = COMPILER_FLAGS,
           extra_compile_args = COMPILER_FLAGS,
-          extra_link_args = MATH_LINKER_FLAGS + LINKER_FLAGS,
+          extra_link_args = LINKER_FLAGS,
           language = FORTRAN,
           f2py_options=['--quiet'])
 
