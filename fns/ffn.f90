@@ -20,6 +20,50 @@
 ! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ! SOFTWARE.
 
+module fastmath
+
+    implicit none
+
+contains
+
+function fast_erf(x2, x, n, m, k) result(val)
+
+    double precision, dimension(n), intent(in) :: x2
+    double precision, dimension(n), intent(in) :: x
+    integer, intent(in) :: n
+    integer, intent(in) :: m
+    double precision, intent(in) :: k
+
+    double precision, dimension(n) :: val
+
+    val = -0.6956521739130435 * x2 - 1.1283791670955126 * x
+    val = 1.0d0 - fast_exp(val, n, m, k)
+
+end function fast_erf
+
+function fast_exp(x, n, m, k) result(val)
+    double precision, dimension(n), intent(in) :: x
+    integer, intent(in) :: n
+    integer, intent(in) :: m
+    double precision, intent(in) :: k
+
+    integer :: i
+    double precision, dimension(n) :: val
+
+    val = (1.0d0+k*x)
+
+    ! Makes sure the expression converges
+    where (val < 0.0d0) val = 0.0d0
+
+    do i=2, m
+        val = val * val
+    enddo
+
+end function fast_exp
+
+
+end module fastmath
+
 
 ! Algorithm 2
 !subroutine fffn(features, seed, nmax, final_ordering)
@@ -465,7 +509,9 @@ end subroutine fobf_l1
 ! Variation that uses an approximation to the l1 distance
 ! Slightly more complicated than the l2 case but fast implementations
 ! of erf and exp should keep the speed reasonable
-subroutine fifafn_l1(features, seed, npartitions, nmax, final_ordering)
+subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, final_ordering)
+
+    use fastmath, only: fast_erf, fast_exp
 
     implicit none
 
@@ -473,6 +519,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, final_ordering)
     integer, intent(in) :: seed
     integer, intent(in) :: npartitions
     integer, intent(in) :: nmax
+    integer, intent(in) :: exp_approx_factor
     integer, dimension(nmax), intent(out) :: final_ordering
 
     double precision, allocatable, dimension(:,:) :: means
@@ -482,7 +529,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, final_ordering)
 
     integer :: partition_size, remainder, nsamples, nfeatures
     integer :: i, j, k, idx, n, m, p
-    double precision :: maxdist, d, pi, sqrt_2_over_pi, one_over_sqrt_2
+    double precision :: maxdist, d, pi, sqrt_2_over_pi, one_over_sqrt_2, c1
 
     pi = 4.0d0 * atan(1.0d0)
 
@@ -540,11 +587,13 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, final_ordering)
     sqrt_2_over_pi = sqrt(2.0d0/pi)
     one_over_sqrt_2 = 1.0d0 / sqrt(2.0d0)
 
+    c1 = 0.5d0**exp_approx_factor
+
     ! TODO: parallelise in some way, ie. threadlocking maxdist
     ! Do the actual algorithm
     do i = 2, nmax
         p = ordering(i)
-        maxdist = sum((features(p,:) - features(seed,:))**2)
+        maxdist = sum(abs(features(p,:) - features(seed,:)))
         idx = i
         do j = i, nsamples
             n = ordering(j)
@@ -556,7 +605,8 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, final_ordering)
                 sigma2 = var(n,:) + var(m,:)
                 sigma = sqrt(sigma2)
                 expon = 0.5d0 * mu**2 / sigma2
-                d = max(d, sqrt_2_over_pi * sum(weights * sigma * exp(-expon) + mu * erf(sqrt(expon))))
+                d = max(d, sum(weights * (sqrt_2_over_pi * sigma * fast_exp(-expon, npartitions, exp_approx_factor, c1) + &
+                    & mu * fast_erf(expon, sqrt(expon), npartitions, exp_approx_factor, c1))))
 
             enddo
             !$OMP END PARALLEL DO
@@ -585,18 +635,3 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, final_ordering)
     deallocate(expon)
 
 end subroutine fifafn_l1
-
-
-! python code for fast exp and erf should it be needed
-!def fast_exp(x, n):
-!    if x < -2**n:
-!        return 0
-!    for i in range(n):
-!        x /= 2
-!    y = 1 + x
-!    for i in range(n-1):
-!        y *= y
-!    return y
-!
-!def faster_erf(x):
-!    return 1 - np.exp(-16/23 * x**2 - 2/np.sqrt(np.pi) * x)

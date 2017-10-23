@@ -22,7 +22,7 @@
 
 from __future__ import print_function
 
-from fns.fn import iffn
+from fns.fn import iffn, brutefn
 import numpy as np
 
 def unpickle(file):
@@ -38,9 +38,9 @@ def unpickle(file):
 def tests():
     x = unpickle('test_batch')[b'data'][:50]
 
-    brute = iffn(x, seed=1, brute=True)
-    exact1 = iffn(x, npartitions=1, exact = True, seed=1)
-    exact16 = iffn(x, npartitions=1, exact = True, seed=1)
+    brute = brutefn(x, seed=1)
+    exact1 = iffn(x, npartitions=1, seed=1)
+    exact16 = iffn(x, npartitions=16, seed=1)
 
     assert(np.array_equal(brute, exact1))
     assert(np.array_equal(brute, exact16))
