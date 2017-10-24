@@ -260,8 +260,8 @@ subroutine fiffn(features, seed, npartitions, nmax, memory, final_ordering)
 
 
 
-    ! Generate output
-    final_ordering = ordering(:nmax)
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
 
     ! Deallocate temporary
     deallocate(means)
@@ -329,8 +329,8 @@ subroutine fobf(features, seed, nmax, memory, final_ordering)
         ordering(idx) = p
     enddo
 
-    ! Generate output
-    final_ordering = ordering(:nmax)
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
 
     ! Deallocate temporary
     deallocate(ordering)
@@ -433,8 +433,8 @@ subroutine fifafn(features, seed, npartitions, nmax, memory, final_ordering)
         ordering(idx) = p
     enddo
 
-    ! Generate output
-    final_ordering = ordering(:nmax)
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
 
     ! Deallocate temporary
     deallocate(means)
@@ -502,8 +502,8 @@ subroutine fobf_l1(features, seed, nmax, memory, final_ordering)
         ordering(idx) = p
     enddo
 
-    ! Generate output
-    final_ordering = ordering(:nmax)
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
 
     ! Deallocate temporary
     deallocate(ordering)
@@ -627,8 +627,8 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memor
         ordering(idx) = p
     enddo
 
-    ! Generate output
-    final_ordering = ordering(:nmax)
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
 
     ! Deallocate temporary
     deallocate(means)
