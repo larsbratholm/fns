@@ -24,7 +24,7 @@ import numpy as np
 
 from .ffn import fiffn, fifafn, fobf, fifafn_l1, fobf_l1
 
-def iffn(features, seed = -1, npartitions = 1, nmax = 0):
+def iffn(features, seed = -1, npartitions = 1, nmax = 0, memory = -1):
     """ Iteratively perform the improved fast furthest neighbours algorithm
         described in Rahman & Rochan 2016 (10.1109/ICCITECHN.2016.7860222)
         to create a furthest neighbour ordering of a feature vector, given an
@@ -38,6 +38,11 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0):
         Specifying a positive integer value for :math:`nmax` results in the
         algorithm stopping after :math:`nmax` steps, resulting in the output
         only being the first :math:`nmax` furthest neighbour indices.
+
+        By default the furthest neighbour to all previously selected points are
+        found in each iteration, however one can specify that only the last
+        ``memory`` points should be used, which results in the (now approximate) 
+        algorithm having linear scaling.
 
         The algorithm is implemented using an OpenMP parallel Fortran routine.
 
@@ -89,9 +94,17 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0):
     if npartitions >= nfeatures/2:
         raise ValueError('too many partitions')
 
-    return fiffn(features, seed, npartitions, nmax)
+    if memory < 0:
+        memory = nsamples
+    elif memory == 0:
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+    elif memory > nsamples:
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
 
-def brutefn(features, seed = -1, metric = 'l2', nmax = 0):
+
+    return fiffn(features, seed, npartitions, nmax, memory)
+
+def brutefn(features, seed = -1, metric = 'l2', nmax = 0, memory = -1):
     """ Brute force furthest neighbour ordering of a feature vector, given an
         initial seed index. If ``seed = -1`` a random index is chosen.
         The algorithm uses either l1-norm (``metric='l1'`` or ``metric='manhattan'``) or l2-norm
@@ -100,6 +113,11 @@ def brutefn(features, seed = -1, metric = 'l2', nmax = 0):
         Specifying a positive integer value for :math:`nmax` results in the
         algorithm stopping after :math:`nmax` steps, resulting in the output
         only being the first :math:`nmax` furthest neighbour indices.
+
+        By default the furthest neighbour to all previously selected points are
+        found in each iteration, however one can specify that only the last
+        ``memory`` points should be used, which results in the (now approximate) 
+        algorithm having linear scaling.
 
         The algorithm is implemented using an OpenMP parallel Fortran routine.
 
@@ -142,14 +160,21 @@ def brutefn(features, seed = -1, metric = 'l2', nmax = 0):
 
     nfeatures = features.shape[1]
 
+    if memory < 0:
+        memory = nsamples
+    elif memory == 0:
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+    elif memory > nsamples:
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+
     if metric in ['l1', 'manhattan']:
-        return fobf_l1(features, seed, nmax)
+        return fobf_l1(features, seed, nmax, memory)
     elif metric in ['l2', 'euclidean']:
-        return fobf(features, seed, nmax)
+        return fobf(features, seed, nmax, memory)
     else:
         raise ValueError('unknown metric %d (Allowed metrics are "l1", "manhattan", "l2", "euclidean")' % metric)
 
-def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx_order = 4):
+def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx_order = 4, memory = -1):
     """ Turns out that while the improved fast furthest neighbours algorithm
         described in Rahman & Rochan 2016 (10.1109/ICCITECHN.2016.7860222) skips a lot
         of distance calculations, it's actually not really any faster than the
@@ -193,6 +218,11 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
         ``approx_order`` is a parameter in how exponential functions are approximated and is
         set to a sensible default.
 
+        By default the furthest neighbour to all previously selected points are
+        found in each iteration, however one can specify that only the last
+        ``memory`` points should be used, which results in the
+        algorithm having linear scaling.
+
         The algorithm is implemented using an OpenMP parallel Fortran routine.
 
         :param features: 2D array of samples - shape (N, d)
@@ -245,11 +275,18 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
     if npartitions >= nfeatures/2:
         raise ValueError('too many partitions')
 
+    if memory < 0:
+        memory = nsamples
+    elif memory == 0:
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+    elif memory > nsamples:
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+
     if metric in ['l1', 'manhattan']:
         if approx_order < 1 or approx_order > 12:
             raise ValueError('expected approx_order to be in the range of 1-12')
-        return fifafn_l1(features, seed, npartitions, nmax, approx_order)
+        return fifafn_l1(features, seed, npartitions, nmax, approx_order, memory)
     elif metric in ['l2', 'euclidean']:
-        return fifafn(features, seed, npartitions, nmax)
+        return fifafn(features, seed, npartitions, nmax, memory)
     else:
         raise ValueError('unknown metric %d (Allowed metrics are "l1", "manhattan", "l2", "euclidean")' % metric)

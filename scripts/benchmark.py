@@ -21,7 +21,7 @@ def largest(x, order, metric = "l1"):
         d[i] = np.max(dist_mat[np.ix_(order[:i]-1, order[i:i+1]-1)])
     return d[1:]
 
-n = 100
+n = 200
 x = unpickle('../tests/test_batch')[b'data'][:n]
 
 dist_mat_l1 = qml.distance.manhattan_distance(x,x)

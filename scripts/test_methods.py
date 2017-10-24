@@ -153,7 +153,7 @@ def unpickle(file):
         dict = pickle.load(fo, encoding='bytes')
     return dict
 
-x = unpickle('test_batch')[b'data'][:100].astype(np.float)
+x = unpickle('../tests/test_batch')[b'data'][:100].astype(np.float)
 
 idx = np.triu_indices(x.shape[0],1)
 

@@ -157,7 +157,7 @@ end module fastmath
 !end subroutine fffn
 
 ! Algorithm 4
-subroutine fiffn(features, seed, npartitions, nmax, final_ordering)
+subroutine fiffn(features, seed, npartitions, nmax, memory, final_ordering)
 
     implicit none
 
@@ -165,6 +165,7 @@ subroutine fiffn(features, seed, npartitions, nmax, final_ordering)
     integer, intent(in) :: seed
     integer, intent(in) :: npartitions
     integer, intent(in) :: nmax
+    integer, intent(in) :: memory
     integer, dimension(nmax), intent(out) :: final_ordering
 
     double precision, allocatable, dimension(:,:) :: means
@@ -229,7 +230,7 @@ subroutine fiffn(features, seed, npartitions, nmax, final_ordering)
             n = ordering(j)
             d = 0.0d0
             !$OMP PARALLEL DO REDUCTION(max:d) PRIVATE(m, ub)
-            do k = 1, i-1
+            do k = max(1,i-memory), i-1
                 m = ordering(k)
                 ub = partition_size * sum((means(n,:npartitions-1) - means(m,:npartitions-1))**2 + &
 					& (std(n,:npartitions-1) + std(m,:npartitions-1))**2)
@@ -270,13 +271,14 @@ subroutine fiffn(features, seed, npartitions, nmax, final_ordering)
 end subroutine fiffn
 
 ! Brute force approach (Algorithm 5 but for furthest neighbours)
-subroutine fobf(features, seed, nmax, final_ordering)
+subroutine fobf(features, seed, nmax, memory, final_ordering)
 
     implicit none
 
     double precision, dimension(:,:), intent(in) :: features
     integer, intent(in) :: seed
     integer, intent(in) :: nmax
+    integer, intent(in) :: memory
     integer, dimension(nmax), intent(out) :: final_ordering
 
     integer, allocatable, dimension(:) :: ordering
@@ -309,7 +311,7 @@ subroutine fobf(features, seed, nmax, final_ordering)
             n = ordering(j)
             d = 0.0d0
             !$OMP PARALLEL DO REDUCTION(max:d) PRIVATE(m)
-            do k = 1, i-1
+            do k = max(1, i-memory), i-1
                 m = ordering(k)
                 d = max(sum((features(n,:) - features(m,:))**2),d)
 
@@ -336,7 +338,7 @@ subroutine fobf(features, seed, nmax, final_ordering)
 end subroutine fobf
 
 ! Variation that uses an approximation to the l2 distance
-subroutine fifafn(features, seed, npartitions, nmax, final_ordering)
+subroutine fifafn(features, seed, npartitions, nmax, memory, final_ordering)
 
     implicit none
 
@@ -344,6 +346,7 @@ subroutine fifafn(features, seed, npartitions, nmax, final_ordering)
     integer, intent(in) :: seed
     integer, intent(in) :: npartitions
     integer, intent(in) :: nmax
+    integer, intent(in) :: memory
     integer, dimension(nmax), intent(out) :: final_ordering
 
     double precision, allocatable, dimension(:,:) :: means
@@ -408,7 +411,7 @@ subroutine fifafn(features, seed, npartitions, nmax, final_ordering)
             n = ordering(j)
             d = 0.0d0
             !$OMP PARALLEL DO REDUCTION(max:d) PRIVATE(m)
-            do k = 1, i-1
+            do k = max(1,i-memory), i-1
                 m = ordering(k)
                 ! TODO: should just multiply with weights instead of splitting this up
                 d = max(d,partition_size * sum((means(n,:npartitions-1) - means(m,:npartitions-1))**2 + &
@@ -441,13 +444,14 @@ subroutine fifafn(features, seed, npartitions, nmax, final_ordering)
 end subroutine fifafn
 
 ! l1-distance brute force approach
-subroutine fobf_l1(features, seed, nmax, final_ordering)
+subroutine fobf_l1(features, seed, nmax, memory, final_ordering)
 
     implicit none
 
     double precision, dimension(:,:), intent(in) :: features
     integer, intent(in) :: seed
     integer, intent(in) :: nmax
+    integer, intent(in) :: memory
     integer, dimension(nmax), intent(out) :: final_ordering
 
     integer, allocatable, dimension(:) :: ordering
@@ -480,7 +484,7 @@ subroutine fobf_l1(features, seed, nmax, final_ordering)
             n = ordering(j)
             d = 0.0d0
             !$OMP PARALLEL DO REDUCTION(max:d) PRIVATE(m)
-            do k = 1, i-1
+            do k = max(1,i-memory), i-1
                 m = ordering(k)
                 d = max(sum(abs(features(n,:) - features(m,:))),d)
 
@@ -509,7 +513,7 @@ end subroutine fobf_l1
 ! Variation that uses an approximation to the l1 distance
 ! Slightly more complicated than the l2 case but fast implementations
 ! of erf and exp should keep the speed reasonable
-subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, final_ordering)
+subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memory, final_ordering)
 
     use fastmath, only: fast_erf, fast_exp
 
@@ -520,6 +524,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, final
     integer, intent(in) :: npartitions
     integer, intent(in) :: nmax
     integer, intent(in) :: exp_approx_factor
+    integer, intent(in) :: memory
     integer, dimension(nmax), intent(out) :: final_ordering
 
     double precision, allocatable, dimension(:,:) :: means
@@ -599,7 +604,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, final
             n = ordering(j)
             d = 0.0d0
             !$OMP PARALLEL DO REDUCTION(max:d) PRIVATE(m, mu, sigma2, sigma, expon)
-            do k = 1, i-1
+            do k = max(1, i-memory), i-1
                 m = ordering(k)
                 mu = abs(means(n,:) - means(m,:))
                 sigma2 = var(n,:) + var(m,:)
