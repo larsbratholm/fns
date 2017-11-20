@@ -14,7 +14,8 @@ def get_distance_matrix_1(x):
     d = x.shape[1] * ((means[:,None] - means[None,:])**2 + std[None,:]**2 + std[:,None]**2)
     return d
 
-def get_distance_matrix_2(x,n):
+def get_distance_matrix_2(X,n):
+    x = X - X.mean(0)
     means = np.zeros((x.shape[0],n))
     std = np.zeros((x.shape[0],n))
     bin_size = x.shape[1] // n
@@ -161,21 +162,12 @@ idx = np.triu_indices(x.shape[0],1)
 #print(get_distance_matrix_1(x)[0,1])
 
 
-z = get_mdistance_matrix(x)[idx]
-y = get_mdistance_matrix_2(x,2)[idx]
+z = get_distance_matrix(x)[idx]
+y = get_distance_matrix_2(x,2)[idx]
 print(scipy.stats.pearsonr(z,y))
-y = get_mdistance_matrix_2(x,8)[idx]
+y = get_distance_matrix_2(x,8)[idx]
 print(scipy.stats.pearsonr(z,y))
-y = get_mdistance_matrix_2(x,32)[idx]
-print(scipy.stats.pearsonr(z,y))
-plt.scatter(z, y)
-y = get_mdistance_matrix_5(x,2)[idx]
-print(scipy.stats.pearsonr(z,y))
-y = get_mdistance_matrix_5(x,8)[idx]
-print(scipy.stats.pearsonr(z,y))
-y = get_mdistance_matrix_5(x,32)[idx]
+y = get_distance_matrix_2(x,32)[idx]
 print(scipy.stats.pearsonr(z,y))
 plt.scatter(z, y)
-#plt.xlim([0,1.2e8])
-#plt.ylim([0,1.2e8])
 plt.show()

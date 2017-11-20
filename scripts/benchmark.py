@@ -1,7 +1,6 @@
 from fns.fn import iffn, brutefn, fastfn
 import numpy as np
 import matplotlib.pyplot as plt
-import qml.distance
 import time
 from collections import Counter
 
@@ -13,6 +12,7 @@ def unpickle(file):
 
 def largest(x, order, metric = "l1"):
     d = np.zeros(order.shape)
+    dist_mat = np.sqrt(np.sum((x[None,:,:] - x[:,None,:])**2, axis=2))
     if metric == "l1":
         dist_mat = qml.distance.manhattan_distance(x,x)
     else:

@@ -239,6 +239,7 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
         :return: Ordered indices of the furthest neighbour search
         :rtype: numpy array
     """
+
     try:
         if features.ndim != 2:
             raise ValueError('expected features of dimension=2')
