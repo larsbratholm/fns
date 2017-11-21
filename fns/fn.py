@@ -165,10 +165,8 @@ def brutefn(features, seed = -1, metric = 'l2', nmax = 0, memory = -1):
     if memory < 0:
         memory = nsamples
     elif memory == 0:
-        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
     elif memory > nsamples:
-        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
 
     if metric in ['l1', 'manhattan']:
@@ -200,9 +198,10 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
 
         .. math::
 
-            dist(X,Y) = d \\cdot \\left\\[ \\sqrt{\\frac{2}{\\pi}} \cdot d \\cdot \\sigma
-                \\exp\\left(-\\frac{\\mu^2}{2\\sigma^2}\\right) 
-                + |\\mu| \\text{erf}\\left( \\frac{|\\mu||}{\\sqrt{2}\\sigma} \\right) \\right\\]
+            dist(X,Y) = d \\cdot \\left\\[ \\sqrt{\\frac{2}{\\pi}} \\cdot \\sqrt\\left(
+                \\sigma_x^2 + \\sigma_y^2 \\right) \\cdot
+                \\exp\\left(-\\frac{(\\mu_x - \\mu_y)^2}{2\\left(\\sigma_x^2+\\sigma_y^2\\right)}\\right) 
+                + |\\mu_x - \\mu_y| \\text{erf}\\left( \\frac{|\\mu_x - \\mu_y||}{\\sqrt{2\\left(\\sigma_x^2 + \\sigma_y^2\\right)}} \\right) \\right\\]
 
         to create a furthest neighbour ordering of a feature vector, given an
         initial seed index. If ``seed = -1`` a random index is chosen.
@@ -243,6 +242,7 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
         :return: Ordered indices of the furthest neighbour search
         :rtype: numpy array
     """
+
     try:
         if features.ndim != 2:
             raise ValueError('expected features of dimension=2')
