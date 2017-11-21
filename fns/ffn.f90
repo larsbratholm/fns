@@ -527,8 +527,8 @@ subroutine fifafn(features, seed, npartitions, nmax, nmem, final_ordering)
 
 end subroutine fifafn
 
-! l1-distance brute force approach
-subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
+! l1-distance brute force approach, with distances stored in memory
+subroutine fobf_l1_inmem(features, seed, nmax, nmem, final_ordering)
 
     implicit none
 
@@ -577,7 +577,7 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
         do j = i, nsamples
             n = ordering(j)
             d = huge_double
-            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m,r,s)
+            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
             do k = max(1, i - nmem), i-1
                 m = ordering(k)
                 if (n > m) then
@@ -606,77 +606,157 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
     ! Deallocate temporary
     deallocate(ordering)
 
-end subroutine fobf_l1
+end subroutine fobf_l1_inmem
 
-!! l1-distance brute force approach
-!subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
-!
-!    implicit none
-!
-!    double precision, dimension(:,:), intent(in) :: features
-!    integer, intent(in) :: seed
-!    integer, intent(in) :: nmax
-!    integer, intent(in) :: nmem
-!    integer, dimension(nmax), intent(out) :: final_ordering
-!
-!    integer, allocatable, dimension(:) :: ordering
-!
-!    integer :: nsamples, nfeatures
-!    integer :: i, j, k, idx, n, m, p
-!    double precision :: maxdist,  d, huge_double
-!
-!    nsamples = size(features,dim=1)
-!    nfeatures = size(features, dim=2)
-!
-!    ! Allocate temporary
-!    allocate(ordering(nsamples))
-!    huge_double = huge(1.0d0)
-!
-!    ! Initialize the ordering
-!    ordering = (/ (i, i = 1, nsamples) /)
-!
-!    ! The first item will be the seed
-!    ordering(seed) = ordering(1)
-!    ordering(1) = seed
-!
-!
-!    ! TODO: parallelise in some way, ie. threadlocking maxdist
-!    ! Do the actual algorithm
-!    do i = 2, nmax
-!        p = ordering(i)
-!        maxdist = 0.0d0
-!        idx = i
-!        do j = i, nsamples
-!            n = ordering(j)
-!            d = huge_double
-!            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
-!            do k = max(1, i - nmem), i-1
-!                if (d <= maxdist) then
-!                    continue
-!                endif
-!                m = ordering(k)
-!                d = min(sum(abs(features(n,:) - features(m,:))),d)
-!            enddo
-!            !$OMP END PARALLEL DO
-!
-!            ! Having this outside the loop is somewhat faster
-!            if (d > maxdist) then
-!                idx = j
-!                maxdist = d
-!            endif
-!        enddo
-!
-!        ordering(i) = ordering(idx)
-!        ordering(idx) = p
-!    enddo
-!
-!    ! Generate output in python format
-!    final_ordering = ordering(:nmax) -1
-!
-!    ! Deallocate temporary
-!    deallocate(ordering)
-!
-!end subroutine fobf_l1
+! l2-distance brute force approach, with distances stored in memory
+subroutine fobf_l2_inmem(features, seed, nmax, nmem, final_ordering)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: features
+    integer, intent(in) :: seed
+    integer, intent(in) :: nmax
+    integer, intent(in) :: nmem
+    integer, dimension(nmax), intent(out) :: final_ordering
+
+    integer, allocatable, dimension(:) :: ordering
+    real, allocatable, dimension(:) :: distances
+
+    integer :: nsamples, nfeatures
+    integer :: i, j, k, idx, n, m, p,r,s
+    double precision :: maxdist,  d, huge_double
+
+    nsamples = size(features,dim=1)
+    nfeatures = size(features, dim=2)
+
+    ! Allocate temporary
+    allocate(ordering(nsamples))
+    allocate(distances((nsamples*(nsamples-1))/2))
+    huge_double = huge(1.0d0)
+
+    ! Initialize the ordering
+    ordering = (/ (i, i = 1, nsamples) /)
+
+    ! The first item will be the seed
+    ordering(seed) = ordering(1)
+    ordering(1) = seed
+
+    !$OMP PARALLEL DO SCHEDULE(dynamic)
+    do i = 1, nsamples-1
+        do j = i+1, nsamples
+            distances(((2*i-2)*nsamples+2*j-i**2-i)/2) = sum((features(i,:)-features(j,:))**2)
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+    ! TODO: parallelise in some way, ie. threadlocking maxdist
+    ! Do the actual algorithm
+    do i = 2, nmax
+        p = ordering(i)
+        maxdist = 0.0d0
+        idx = i
+        do j = i, nsamples
+            n = ordering(j)
+            d = huge_double
+            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
+            do k = max(1, i - nmem), i-1
+                m = ordering(k)
+                if (n > m) then
+                    d = min(d, distances(((2*m-2)*nsamples+2*n-m**2-m)/2))
+                else
+                    d = min(d, distances(((2*n-2)*nsamples+2*m-n**2-n)/2))
+                endif
+            enddo
+            !$OMP END PARALLEL DO
+
+            ! Having this outside the loop is somewhat faster
+            if (d > maxdist) then
+                idx = j
+                maxdist = d
+            endif
+        enddo
+
+        ordering(i) = ordering(idx)
+        ordering(idx) = p
+    enddo
+
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
+
+    ! Deallocate temporary
+    deallocate(ordering)
+
+end subroutine fobf_l2_inmem
+
+! l1-distance brute force approach
+subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
+
+    implicit none
+
+    double precision, dimension(:,:), intent(in) :: features
+    integer, intent(in) :: seed
+    integer, intent(in) :: nmax
+    integer, intent(in) :: nmem
+    integer, dimension(nmax), intent(out) :: final_ordering
+
+    integer, allocatable, dimension(:) :: ordering
+
+    integer :: nsamples, nfeatures
+    integer :: i, j, k, idx, n, m, p
+    double precision :: maxdist,  d, huge_double
+
+    nsamples = size(features,dim=1)
+    nfeatures = size(features, dim=2)
+
+    ! Allocate temporary
+    allocate(ordering(nsamples))
+    huge_double = huge(1.0d0)
+
+    ! Initialize the ordering
+    ordering = (/ (i, i = 1, nsamples) /)
+
+    ! The first item will be the seed
+    ordering(seed) = ordering(1)
+    ordering(1) = seed
+
+
+    ! TODO: parallelise in some way, ie. threadlocking maxdist
+    ! Do the actual algorithm
+    do i = 2, nmax
+        p = ordering(i)
+        maxdist = 0.0d0
+        idx = i
+        do j = i, nsamples
+            n = ordering(j)
+            d = huge_double
+            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
+            do k = max(1, i - nmem), i-1
+                if (d <= maxdist) then
+                    continue
+                endif
+                m = ordering(k)
+                d = min(sum(abs(features(n,:) - features(m,:))),d)
+            enddo
+            !$OMP END PARALLEL DO
+
+            ! Having this outside the loop is somewhat faster
+            if (d > maxdist) then
+                idx = j
+                maxdist = d
+            endif
+        enddo
+
+        ordering(i) = ordering(idx)
+        ordering(idx) = p
+    enddo
+
+    ! Generate output in python format
+    final_ordering = ordering(:nmax) -1
+
+    ! Deallocate temporary
+    deallocate(ordering)
+
+end subroutine fobf_l1
 
 ! Variation that uses an approximation to the l1 distance
 ! Slightly more complicated than the l2 case but fast implementations
