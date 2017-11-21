@@ -36,8 +36,16 @@ function fast_erf(x2, x, n, m, k) result(val)
 
     double precision, dimension(n) :: val
 
-    val = 1.0d0 - fast_exp(val, n, m, k)
     val = -0.6956521739130435 * x2 - 1.1283791670955126 * x
+    val = 1.0d0 - fast_exp(val, n, m, k)
+
+    ! second order
+    !val = 1.0d0 - 0.7897872340425532 * fast_exp(-0.9069444444444444 * x2-0.749958629819626*x,n,m,k) &
+    !    & -0.21021276595744676 * fast_exp(-0.9069444444444444 * x2-2.5501372990470221*x,n,m,k)
+
+    ! exact
+    !val = erf(x)
+
 end function fast_erf
 
 
@@ -59,122 +67,126 @@ function fast_exp(x, n, m, k) result(val)
         val = val * val
     enddo
 
+    ! exact
+    !val = exp(x)
+
 
 end function fast_exp
 
 end module fastmath
 
 
-! Algorithm 2 but subtracting the mean of each feature
+!! Algorithm 2 but subtracting the mean of each feature
+!! in the preprocessing
+!subroutine fffn(features, seed, nmax, nmem, final_ordering)
+!
+!    implicit none
+!
+!    double precision, dimension(:,:), intent(in) :: features
+!    integer, intent(in) :: seed
+!    integer, intent(in) :: nmax
+!    integer, intent(in) :: nmem
+!    integer, dimension(nmax), intent(out) :: final_ordering
+!
+!    double precision, allocatable, dimension(:) :: means
+!    double precision, allocatable, dimension(:) :: feature_means
+!    double precision, allocatable, dimension(:) :: std
+!    integer, allocatable, dimension(:) :: ordering
+!
+!    integer :: partition_size, remainder, nsamples, nfeatures
+!    integer :: i, j, k, idx, n, m, p, l
+!    double precision :: maxdist, ub, d, huge_double, lb, tmp
+!
+!    nsamples = size(features,dim=1)
+!    nfeatures = size(features, dim=2)
+!
+!    ! Allocate temporary
+!    allocate(means(nsamples))
+!    allocate(feature_means(nfeatures))
+!    allocate(std(nsamples))
+!    allocate(ordering(nsamples))
+!
+!    huge_double = huge(1.0d0)
+!
+!    ! Begin preprocessing
+!    means = 0.0d0
+!    std = 0.0d0
+!
+!    feature_means = sum(features, dim=1) / nsamples
+!
+!    !$OMP PARALLEL DO
+!    do i = 1, nsamples
+!        means(i) = sum(features(i,:) - feature_means) / nfeatures
+!        std(i) = sqrt(sum((features(i,:) - feature_means - means(i))**2) / nfeatures)
+!    enddo
+!    !$OMP END PARALLEL DO
+!
+!    ! Initialize the ordering
+!    ordering = (/ (i, i = 1, nsamples) /)
+!
+!    ! The first item will be the seed
+!    ordering(seed) = ordering(1)
+!    ordering(1) = seed
+!
+!
+!    ! Do the actual algorithm
+!    do i = 2, nmax
+!        p = ordering(i)
+!        maxdist = sum((features(p,:) - features(seed,:))**2)
+!        idx = i
+!        do j = i, nsamples
+!            n = ordering(j)
+!            d = huge_double
+!            !$OMP PARALLEL DO PRIVATE(m, lb, ub, tmp) REDUCTION(min:d)
+!            do k = max(1, i - nmem), i-1
+!                if (d <= maxdist) then
+!                    continue
+!                endif
+!
+!                m = ordering(k)
+!                tmp = (means(n) - means(m))**2 + std(n)**2 + std(m)**2
+!                ub = nfeatures * (tmp + 2*std(n)*std(m))
+!
+!                if (ub <= maxdist) then
+!                    d = 0.0d0
+!                    continue
+!                endif
+!
+!                lb = nfeatures * (tmp - 2*std(n)*std(m))
+!
+!                if (lb >= d) then
+!                    continue
+!                endif
+!
+!                d = min(d,sum((features(n,:) - features(m,:))**2))
+!
+!            enddo
+!            !$OMP END PARALLEL DO
+!
+!            if (d > maxdist) then
+!                idx = j
+!                maxdist = d
+!            endif
+!        enddo
+!
+!        ordering(i) = ordering(idx)
+!        ordering(idx) = p
+!    enddo
+!
+!
+!    ! Generate output in python format
+!    final_ordering = ordering(:nmax) - 1
+!
+!    ! Deallocate temporary
+!    deallocate(means)
+!    deallocate(feature_means)
+!    deallocate(std)
+!    deallocate(ordering)
+!
+!end subroutine fffn
+
+! Algorithm 4 but subtracting the mean of each feature
 ! in the preprocessing
-subroutine fffn(features, seed, nmax, nmem, final_ordering)
-
-    implicit none
-
-    double precision, dimension(:,:), intent(in) :: features
-    integer, intent(in) :: seed
-    integer, intent(in) :: nmax
-    integer, intent(in) :: nmem
-    integer, dimension(nmax), intent(out) :: final_ordering
-
-    double precision, allocatable, dimension(:) :: means
-    double precision, allocatable, dimension(:) :: feature_means
-    double precision, allocatable, dimension(:) :: std
-    integer, allocatable, dimension(:) :: ordering
-
-    integer :: partition_size, remainder, nsamples, nfeatures
-    integer :: i, j, k, idx, n, m, p, l
-    double precision :: maxdist, ub, d, huge_double, lb, tmp
-
-    nsamples = size(features,dim=1)
-    nfeatures = size(features, dim=2)
-
-    ! Allocate temporary
-    allocate(means(nsamples))
-    allocate(feature_means(nfeatures))
-    allocate(std(nsamples))
-    allocate(ordering(nsamples))
-
-    huge_double = huge(1.0d0)
-
-    ! Begin preprocessing
-    means = 0.0d0
-    std = 0.0d0
-
-    feature_means = sum(features, dim=1) / nsamples
-
-    !$OMP PARALLEL DO
-    do i = 1, nsamples
-        means(i) = sum(features(i,:) - feature_means) / nfeatures
-        std(i) = sqrt(sum((features(i,:) - feature_means - means(i))**2) / nfeatures)
-    enddo
-    !$OMP END PARALLEL DO
-
-    ! Initialize the ordering
-    ordering = (/ (i, i = 1, nsamples) /)
-
-    ! The first item will be the seed
-    ordering(seed) = ordering(1)
-    ordering(1) = seed
-
-
-    ! Do the actual algorithm
-    do i = 2, nmax
-        p = ordering(i)
-        maxdist = sum((features(p,:) - features(seed,:))**2)
-        idx = i
-        do j = i, nsamples
-            n = ordering(j)
-            d = huge_double
-            !$OMP PARALLEL DO PRIVATE(m, lb, ub, tmp) REDUCTION(min:d)
-            do k = max(1, i - nmem), i-1
-                if (d <= maxdist) then
-                    continue
-                endif
-
-                m = ordering(k)
-                tmp = (means(n) - means(m))**2 + std(n)**2 + std(m)**2
-                ub = nfeatures * (tmp + 2*std(n)*std(m))
-
-                if (ub <= maxdist) then
-                    d = 0.0d0
-                    continue
-                endif
-
-                lb = nfeatures * (tmp - 2*std(n)*std(m))
-
-                if (lb >= d) then
-                    continue
-                endif
-
-                d = min(d,sum((features(n,:) - features(m,:))**2))
-
-            enddo
-            !$OMP END PARALLEL DO
-
-            if (d > maxdist) then
-                idx = j
-                maxdist = d
-            endif
-        enddo
-
-        ordering(i) = ordering(idx)
-        ordering(idx) = p
-    enddo
-
-
-    ! Generate output
-    final_ordering = ordering(:nmax)
-
-    ! Deallocate temporary
-    deallocate(means)
-    deallocate(feature_means)
-    deallocate(std)
-    deallocate(ordering)
-
-end subroutine fffn
-
-! Algorithm 4
 subroutine fiffn(features, seed, npartitions, nmax, nmem, final_ordering)
 
     implicit none
@@ -527,9 +539,10 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
     integer, dimension(nmax), intent(out) :: final_ordering
 
     integer, allocatable, dimension(:) :: ordering
+    real, allocatable, dimension(:) :: distances
 
     integer :: nsamples, nfeatures
-    integer :: i, j, k, idx, n, m, p
+    integer :: i, j, k, idx, n, m, p,r,s
     double precision :: maxdist,  d, huge_double
 
     nsamples = size(features,dim=1)
@@ -537,6 +550,7 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
 
     ! Allocate temporary
     allocate(ordering(nsamples))
+    allocate(distances((nsamples*(nsamples-1))/2))
     huge_double = huge(1.0d0)
 
     ! Initialize the ordering
@@ -546,6 +560,13 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
     ordering(seed) = ordering(1)
     ordering(1) = seed
 
+    !$OMP PARALLEL DO SCHEDULE(dynamic)
+    do i = 1, nsamples-1
+        do j = i+1, nsamples
+            distances(((2*i-2)*nsamples+2*j-i**2-i)/2) = sum(abs(features(i,:)-features(j,:)))
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
 
     ! TODO: parallelise in some way, ie. threadlocking maxdist
     ! Do the actual algorithm
@@ -556,13 +577,15 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
         do j = i, nsamples
             n = ordering(j)
             d = huge_double
-            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
+            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m,r,s)
             do k = max(1, i - nmem), i-1
-                if (d <= maxdist) then
-                    continue
-                endif
                 m = ordering(k)
-                d = min(sum(abs(features(n,:) - features(m,:))),d)
+                if (n > m) then
+                    d = min(d, distances(((2*m-2)*nsamples+2*n-m**2-m)/2))
+                else
+                    d = min(d, distances(((2*n-2)*nsamples+2*m-n**2-n)/2))
+                endif
+
             enddo
             !$OMP END PARALLEL DO
 
@@ -585,10 +608,80 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
 
 end subroutine fobf_l1
 
+!! l1-distance brute force approach
+!subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
+!
+!    implicit none
+!
+!    double precision, dimension(:,:), intent(in) :: features
+!    integer, intent(in) :: seed
+!    integer, intent(in) :: nmax
+!    integer, intent(in) :: nmem
+!    integer, dimension(nmax), intent(out) :: final_ordering
+!
+!    integer, allocatable, dimension(:) :: ordering
+!
+!    integer :: nsamples, nfeatures
+!    integer :: i, j, k, idx, n, m, p
+!    double precision :: maxdist,  d, huge_double
+!
+!    nsamples = size(features,dim=1)
+!    nfeatures = size(features, dim=2)
+!
+!    ! Allocate temporary
+!    allocate(ordering(nsamples))
+!    huge_double = huge(1.0d0)
+!
+!    ! Initialize the ordering
+!    ordering = (/ (i, i = 1, nsamples) /)
+!
+!    ! The first item will be the seed
+!    ordering(seed) = ordering(1)
+!    ordering(1) = seed
+!
+!
+!    ! TODO: parallelise in some way, ie. threadlocking maxdist
+!    ! Do the actual algorithm
+!    do i = 2, nmax
+!        p = ordering(i)
+!        maxdist = 0.0d0
+!        idx = i
+!        do j = i, nsamples
+!            n = ordering(j)
+!            d = huge_double
+!            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
+!            do k = max(1, i - nmem), i-1
+!                if (d <= maxdist) then
+!                    continue
+!                endif
+!                m = ordering(k)
+!                d = min(sum(abs(features(n,:) - features(m,:))),d)
+!            enddo
+!            !$OMP END PARALLEL DO
+!
+!            ! Having this outside the loop is somewhat faster
+!            if (d > maxdist) then
+!                idx = j
+!                maxdist = d
+!            endif
+!        enddo
+!
+!        ordering(i) = ordering(idx)
+!        ordering(idx) = p
+!    enddo
+!
+!    ! Generate output in python format
+!    final_ordering = ordering(:nmax) -1
+!
+!    ! Deallocate temporary
+!    deallocate(ordering)
+!
+!end subroutine fobf_l1
+
 ! Variation that uses an approximation to the l1 distance
 ! Slightly more complicated than the l2 case but fast implementations
 ! of erf and exp should keep the speed reasonable
-subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memory, final_ordering)
+subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, nmem, final_ordering)
 
     use fastmath, only: fast_erf, fast_exp
 
@@ -599,7 +692,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memor
     integer, intent(in) :: npartitions
     integer, intent(in) :: nmax
     integer, intent(in) :: exp_approx_factor
-    integer, intent(in) :: memory
+    integer, intent(in) :: nmem
     integer, dimension(nmax), intent(out) :: final_ordering
 
     double precision, allocatable, dimension(:,:) :: means
@@ -609,7 +702,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memor
 
     integer :: partition_size, remainder, nsamples, nfeatures
     integer :: i, j, k, idx, n, m, p
-    double precision :: maxdist, d, pi, sqrt_2_over_pi, one_over_sqrt_2, c1
+    double precision :: maxdist, d, pi, sqrt_2_over_pi, one_over_sqrt_2, c1, huge_double, dd
 
     pi = 4.0d0 * atan(1.0d0)
     huge_double = huge(1.0d0)
@@ -685,7 +778,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memor
         do j = i, nsamples
             n = ordering(j)
             d = huge_double
-            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m, mu, sigma2, sigma, expon)
+            !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m, mu, sigma2, sigma, expon, dd)
             do k = max(1, i - nmem), i-1
                 if (d <= maxdist) then
                     continue
@@ -695,10 +788,11 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memor
                 sigma2 = var(n,:) + var(m,:)
                 sigma = sqrt(sigma2)
                 expon = 0.5d0 * mu**2 / sigma2
-                d = min(d, sqrt_2_over_pi * sum(weights * sigma * exp(-expon) + mu * erf(sqrt(expon))))
-                write(*,*) d, sum(abs(features(n,:) - features(m,:)))
-                d = max(d, sum(weights * (sqrt_2_over_pi * sigma * fast_exp(-expon, npartitions, exp_approx_factor, c1) + &
-                    & mu * fast_erf(expon, sqrt(expon), npartitions, exp_approx_factor, c1))))
+                d = sum(weights * (sqrt_2_over_pi * sigma * fast_exp(-expon, npartitions, exp_approx_factor, c1) + &
+                    & abs(mu) * fast_erf(expon, sqrt(expon), npartitions, exp_approx_factor, c1)))
+                !d = sum(weights * (sqrt_2_over_pi * sigma * exp(-expon) + &
+                !    & abs(mu) * erf(sqrt(expon))))
+                !write(*,*) d, dd,sum(abs(features(n,:) - features(m,:)))
 
             enddo
             !$OMP END PARALLEL DO
@@ -719,6 +813,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, memor
 
     ! Deallocate temporary
     deallocate(means)
+    deallocate(feature_means)
     deallocate(var)
     deallocate(ordering)
     deallocate(sigma)
