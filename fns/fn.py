@@ -98,8 +98,10 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0, memory = -1):
         memory = nsamples
     elif memory == 0:
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
     elif memory > nsamples:
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
 
 
     return fiffn(features, seed, npartitions, nmax, memory)
@@ -164,8 +166,10 @@ def brutefn(features, seed = -1, metric = 'l2', nmax = 0, memory = -1):
         memory = nsamples
     elif memory == 0:
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
     elif memory > nsamples:
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
 
     if metric in ['l1', 'manhattan']:
         return fobf_l1(features, seed, nmax, memory)
@@ -279,8 +283,10 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
         memory = nsamples
     elif memory == 0:
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
     elif memory > nsamples:
         raise ValueError('memory must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('memory must be between 0 and number of samples (%d)' % nsamples)
 
     if metric in ['l1', 'manhattan']:
         if approx_order < 1 or approx_order > 12:
