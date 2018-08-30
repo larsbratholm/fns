@@ -24,8 +24,8 @@ import numpy as np
 
 from .ffn import fiffn, fifafn, fobf, fifafn_l1, fobf_l1
 
-def iffn(features, seed = -1, npartitions = 1, nmax = 0, neighbours = -1):
-    """ Iteratively perform the improved fast furthest neighbours algorithm
+def iffn(features, seed = -1, npartitions = 1, nmax = 0, nneighbours = -1):
+    """ Iteratively perform the improved fast furthest nneighbours algorithm
         described in Rahman & Rochan 2016 (10.1109/ICCITECHN.2016.7860222)
         to create a furthest neighbour ordering of a feature vector, given an
         initial seed index. If ``seed = -1`` a random index is chosen.
@@ -41,7 +41,7 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0, neighbours = -1):
 
         By default the furthest neighbour to all previously selected points are
         found in each iteration, however one can specify that only the last
-        ``neighbours`` points should be used, which results in the (now approximate) 
+        ``nneighbours`` points should be used, which results in the (now approximate) 
         algorithm having linear scaling.
 
         The algorithm is implemented using an OpenMP parallel Fortran routine.
@@ -94,19 +94,19 @@ def iffn(features, seed = -1, npartitions = 1, nmax = 0, neighbours = -1):
     if npartitions >= nfeatures/2:
         raise ValueError('too many partitions')
 
-    if neighbours < 0:
-        neighbours = nsamples
-    elif neighbours == 0:
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamploes)
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamples)
-    elif neighbours > nsamples:
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamploes)
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamples)
+    if nneighbours < 0:
+        nneighbours = nsamples
+    elif nneighbours == 0:
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamples)
+    elif nneighbours > nsamples:
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamples)
 
 
-    return fiffn(features, seed, npartitions, nmax, neighbours)
+    return fiffn(features, seed, npartitions, nmax, nneighbours)
 
-def brutefn(features, seed = -1, metric = 'l2', nmax = 0, neighbours = -1, store_memory = False):
+def brutefn(features, seed = -1, metric = 'l2', nmax = 0, nneighbours = -1, store_memory = False):
     """ Brute force furthest neighbour ordering of a feature vector, given an
         initial seed index. If ``seed = -1`` a random index is chosen.
         The algorithm uses either l1-norm (``metric='l1'`` or ``metric='manhattan'``) or l2-norm
@@ -118,7 +118,7 @@ def brutefn(features, seed = -1, metric = 'l2', nmax = 0, neighbours = -1, store
 
         By default the furthest neighbour to all previously selected points are
         found in each iteration, however one can specify that only the last
-        ``neighbours`` points should be used, which results in the (now approximate) 
+        ``nneighbours`` points should be used, which results in the (now approximate) 
         algorithm having linear scaling.
 
         ``store_memory`` specifies if all distances should be precomputed or computed on the fly.
@@ -166,22 +166,22 @@ def brutefn(features, seed = -1, metric = 'l2', nmax = 0, neighbours = -1, store
 
     nfeatures = features.shape[1]
 
-    if neighbours < 0:
-        neighbours = nsamples
-    elif neighbours == 0:
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamples)
-    elif neighbours > nsamples:
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamples)
+    if nneighbours < 0:
+        nneighbours = nsamples
+    elif nneighbours == 0:
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamples)
+    elif nneighbours > nsamples:
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamples)
 
     if metric in ['l1', 'manhattan']:
-        return fobf_l1(features, seed, nmax, neighbours)
+        return fobf_l1(features, seed, nmax, nneighbours)
     elif metric in ['l2', 'euclidean']:
-        return fobf(features, seed, nmax, neighbours)
+        return fobf(features, seed, nmax, nneighbours)
     else:
         raise ValueError('unknown metric %d (Allowed metrics are "l1", "manhattan", "l2", "euclidean")' % metric)
 
-def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx_order = 4, neighbours = -1):
-    """ Turns out that while the improved fast furthest neighbours algorithm
+def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx_order = 4, nneighbours = -1):
+    """ Turns out that while the improved fast furthest nneighbours algorithm
         described in Rahman & Rochan 2016 (10.1109/ICCITECHN.2016.7860222) skips a lot
         of distance calculations, it's actually not really any faster than the
         brute force algorithm.
@@ -227,7 +227,7 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
 
         By default the furthest neighbour to all previously selected points are
         found in each iteration, however one can specify that only the last
-        ``neighbours`` points should be used, which results in the
+        ``nneighbours`` points should be used, which results in the
         algorithm having linear scaling.
 
         The algorithm is implemented using an OpenMP parallel Fortran routine.
@@ -283,20 +283,20 @@ def fastfn(features, seed = -1, metric = 'l2', npartitions = 1, nmax = 0, approx
     if npartitions >= nfeatures/2:
         raise ValueError('too many partitions')
 
-    if neighbours < 0:
-        neighbours = nsamples
-    elif neighbours == 0:
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamploes)
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamples)
-    elif neighbours > nsamples:
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamploes)
-        raise ValueError('neighbours must be between 0 and number of samples (%d)' % nsamples)
+    if nneighbours < 0:
+        nneighbours = nsamples
+    elif nneighbours == 0:
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamples)
+    elif nneighbours > nsamples:
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamploes)
+        raise ValueError('nneighbours must be between 0 and number of samples (%d)' % nsamples)
 
     if metric in ['l1', 'manhattan']:
         if approx_order < 1 or approx_order > 12:
             raise ValueError('expected approx_order to be in the range of 1-12')
-        return fifafn_l1(features, seed, npartitions, nmax, approx_order, neighbours)
+        return fifafn_l1(features, seed, npartitions, nmax, approx_order, nneighbours)
     elif metric in ['l2', 'euclidean']:
-        return fifafn(features, seed, npartitions, nmax, neighbours)
+        return fifafn(features, seed, npartitions, nmax, nneighbours)
     else:
         raise ValueError('unknown metric %d (Allowed metrics are "l1", "manhattan", "l2", "euclidean")' % metric)

@@ -36,7 +36,7 @@ function fast_erf(x2, x, n, m, k) result(val)
 
     double precision, dimension(n) :: val
 
-    val = -0.6956521739130435 * x2 - 1.1283791670955126 * x
+    val = -0.6956521739130435d0 * x2 - 1.1283791670955126d0 * x
     val = 1.0d0 - fast_exp(val, n, m, k)
 
     ! second order
@@ -132,7 +132,7 @@ end module fastmath
 !    ! Do the actual algorithm
 !    do i = 2, nmax
 !        p = ordering(i)
-!        maxdist = sum((features(p,:) - features(seed,:))**2)
+!        maxdist = 0.0d0
 !        idx = i
 !        do j = i, nsamples
 !            n = ordering(j)
@@ -140,7 +140,7 @@ end module fastmath
 !            !$OMP PARALLEL DO PRIVATE(m, lb, ub, tmp) REDUCTION(min:d)
 !            do k = max(1, i - nmem), i-1
 !                if (d <= maxdist) then
-!                    continue
+!                    cycle
 !                endif
 !
 !                m = ordering(k)
@@ -149,13 +149,13 @@ end module fastmath
 !
 !                if (ub <= maxdist) then
 !                    d = 0.0d0
-!                    continue
+!                    cycle
 !                endif
 !
 !                lb = nfeatures * (tmp - 2*std(n)*std(m))
 !
 !                if (lb >= d) then
-!                    continue
+!                    cycle
 !                endif
 !
 !                d = min(d,sum((features(n,:) - features(m,:))**2))
@@ -271,9 +271,7 @@ subroutine fiffn(features, seed, npartitions, nmax, nmem, final_ordering)
     ! Do the actual algorithm
     do i = 2, nmax
         p = ordering(i)
-        ! Redundant extra calculation, but might be better to start with a realistic guess
-        ! than 0 depending on the parallelisation
-        maxdist = sum((features(p,:) - features(seed,:))**2)
+        maxdist = 0.0d0
         idx = i
         do j = i, nsamples
             n = ordering(j)
@@ -281,7 +279,7 @@ subroutine fiffn(features, seed, npartitions, nmax, nmem, final_ordering)
             !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m, ub, lb, tmp)
             do k = max(1, i - nmem), i-1
                 if (d <= maxdist) then
-                    continue
+                    cycle
                 endif
 
                 m = ordering(k)
@@ -290,13 +288,13 @@ subroutine fiffn(features, seed, npartitions, nmax, nmem, final_ordering)
 
                 if (ub <= maxdist) then
                     d = 0.0d0
-                    continue
+                    cycle
                 endif
 
                 lb = sum(weights * (tmp - 2*std(n,:)*std(m,:)))
 
                 if (lb >= d) then
-                    continue
+                    cycle
                 endif
 
                 d = min(d,sum((features(n,:) - features(m,:))**2))
@@ -304,12 +302,11 @@ subroutine fiffn(features, seed, npartitions, nmax, nmem, final_ordering)
             enddo
             !$OMP END PARALLEL DO
 
-            ! Having this outside the loop is somewhat faster
-            ! and allows for easy parallelisation
             if (d > maxdist) then
                 idx = j
                 maxdist = d
             endif
+
         enddo
 
         ordering(i) = ordering(idx)
@@ -375,7 +372,7 @@ subroutine fobf(features, seed, nmax, nmem, final_ordering)
             !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
             do k = max(1, i - nmem), i-1
                 if (d <= maxdist) then
-                    continue
+                    cycle
                 endif
                 m = ordering(k)
                 d = min(sum((features(n,:) - features(m,:))**2),d)
@@ -486,7 +483,7 @@ subroutine fifafn(features, seed, npartitions, nmax, nmem, final_ordering)
         p = ordering(i)
         ! Redundant extra calculation, but might be better to start with a realistic guess
         ! than 0 depending on the parallelisation
-        maxdist = sum((features(p,:) - features(seed,:))**2)
+        maxdist = 0.0d0
         idx = i
         do j = i, nsamples
             n = ordering(j)
@@ -494,7 +491,7 @@ subroutine fifafn(features, seed, npartitions, nmax, nmem, final_ordering)
             !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
             do k = max(1, i - nmem), i-1
                 if (d <= maxdist) then
-                    continue
+                    cycle
                 endif
 
                 m = ordering(k)
@@ -732,7 +729,7 @@ subroutine fobf_l1(features, seed, nmax, nmem, final_ordering)
             !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m)
             do k = max(1, i - nmem), i-1
                 if (d <= maxdist) then
-                    continue
+                    cycle
                 endif
                 m = ordering(k)
                 d = min(sum(abs(features(n,:) - features(m,:))),d)
@@ -853,7 +850,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, nmem,
     ! Do the actual algorithm
     do i = 2, nmax
         p = ordering(i)
-        maxdist = sum(abs(features(p,:) - features(seed,:)))
+        maxdist = 0.0d0
         idx = i
         do j = i, nsamples
             n = ordering(j)
@@ -861,7 +858,7 @@ subroutine fifafn_l1(features, seed, npartitions, nmax, exp_approx_factor, nmem,
             !$OMP PARALLEL DO REDUCTION(min:d) PRIVATE(m, mu, sigma2, sigma, expon, dd)
             do k = max(1, i - nmem), i-1
                 if (d <= maxdist) then
-                    continue
+                    cycle
                 endif
                 m = ordering(k)
                 mu = abs(means(n,:) - means(m,:))
